@@ -257,6 +257,12 @@ pub const renamed = std.StaticStringMap([]const u8).initComptime(&.{
 /// This is currently only supported on macOS.
 @"font-thicken-strength": u8 = 255,
 
+/// Where to break font shaping runs.
+///
+/// Currently only one option, "cursor", which is enabled by default and breaks
+/// text runs under the cursor.
+@"font-shaping-break": FontShapingBreak = .{},
+
 /// What color space to use when performing alpha blending.
 ///
 /// This affects how text looks for different background/foreground color pairs.
@@ -5586,6 +5592,11 @@ pub const FontSyntheticStyle = packed struct {
     bold: bool = true,
     italic: bool = true,
     @"bold-italic": bool = true,
+};
+
+/// See "font-shaping-break" for documentation
+pub const FontShapingBreak = packed struct {
+    cursor: bool = true,
 };
 
 /// See "link" for documentation.
