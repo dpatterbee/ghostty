@@ -49,6 +49,7 @@ pub const Options = struct {
     /// The parent surface to inherit settings such as font size, working
     /// directory, etc. from.
     parent: ?*CoreSurface = null,
+    with_cwd: bool,
 };
 
 /// The container that this surface is directly attached to.
@@ -335,12 +336,12 @@ pub const InitConfig = struct {
 
     pub fn init(
         alloc: Allocator,
-        app: *App,
+        _: *App,
         opts: Options,
     ) Allocator.Error!InitConfig {
         const parent = opts.parent orelse return .{};
 
-        const pwd: ?[]const u8 = if (app.config.@"window-inherit-working-directory")
+        const pwd: ?[]const u8 = if (opts.with_cwd)
             try parent.pwd(alloc)
         else
             null;
@@ -499,6 +500,7 @@ pub fn init(self: *Surface, app: *App, opts: Options) !void {
     errdefer if (cgroup_path) |path| app.core_app.alloc.free(path);
 
     // Build our initialization config
+    std.log.info("new surface options: {}", .{opts});
     const init_config = try InitConfig.init(app.core_app.alloc, app, opts);
     errdefer init_config.deinit(app.core_app.alloc);
 
@@ -697,7 +699,8 @@ fn realize(self: *Surface) !void {
     errdefer self.app.core_app.deleteSurface(self);
 
     // Get our new surface config
-    var config = try apprt.surface.newConfig(self.app.core_app, &self.app.config);
+    // var config = try apprt.surface.newConfig(self.app.core_app, &self.app.config);
+    var config = self.app.config.shallowClone(self.app.core_app.alloc);
     defer config.deinit();
 
     if (self.init_config.pwd) |pwd| {

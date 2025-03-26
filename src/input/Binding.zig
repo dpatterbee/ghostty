@@ -326,6 +326,8 @@ pub const Action = union(enum) {
     /// Open a new tab.
     new_tab: void,
 
+    new_tab_with_cwd: void,
+
     /// Go to the previous tab.
     previous_tab: void,
 
@@ -359,6 +361,16 @@ pub const Action = union(enum) {
     /// Example: Create split on the right
     ///   keybind = cmd+shift+d=new_split:right
     new_split: SplitDirection,
+
+    /// Create a new split in the given direction with inherited working
+    /// directory.
+    ///
+    /// Arguments:
+    ///   - right, down, left, up, auto (splits along the larger direction)
+    ///
+    /// Example: Create split on the right
+    ///   keybind = cmd+shift+d=new_split:right
+    new_split_with_cwd: SplitDirection,
 
     /// Focus on a split in a given direction. For example `goto_split:up`.
     /// Valid values are left, right, up, down, previous and next.
@@ -799,6 +811,7 @@ pub const Action = union(enum) {
             // come from. For example `new_window` needs to be sourced to
             // a surface so inheritance can be done correctly.
             .new_tab,
+            .new_tab_with_cwd,
             .previous_tab,
             .next_tab,
             .last_tab,
@@ -806,6 +819,7 @@ pub const Action = union(enum) {
             .move_tab,
             .toggle_tab_overview,
             .new_split,
+            .new_split_with_cwd,
             .goto_split,
             .toggle_split_zoom,
             .resize_split,

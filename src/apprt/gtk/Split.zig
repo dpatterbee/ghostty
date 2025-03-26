@@ -51,6 +51,11 @@ orientation: Orientation,
 top_left: Surface.Container.Elem,
 bottom_right: Surface.Container.Elem,
 
+const Options = struct {
+    direction: apprt.action.SplitDirection,
+    with_cwd: bool,
+};
+
 /// Create a new split panel with the given sibling surface in the given
 /// direction. The direction is where the new surface will be initialized.
 ///
@@ -60,18 +65,18 @@ bottom_right: Surface.Container.Elem,
 pub fn create(
     alloc: Allocator,
     sibling: *Surface,
-    direction: apprt.action.SplitDirection,
+    opts: Options,
 ) !*Split {
     var split = try alloc.create(Split);
     errdefer alloc.destroy(split);
-    try split.init(sibling, direction);
+    try split.init(sibling, opts);
     return split;
 }
 
 pub fn init(
     self: *Split,
     sibling: *Surface,
-    direction: apprt.action.SplitDirection,
+    opts: Options,
 ) !void {
     // If our sibling is too small to be split in half then we don't
     // allow the split to happen. This avoids a situation where the
@@ -87,7 +92,7 @@ pub fn init(
         const multiplier = 4;
 
         const size = &sibling.core_surface.size;
-        const small = switch (direction) {
+        const small = switch (opts.direction) {
             .right, .left => size.screen.width < size.cell.width * multiplier,
             .down, .up => size.screen.height < size.cell.height * multiplier,
         };
@@ -98,13 +103,14 @@ pub fn init(
     const alloc = sibling.app.core_app.alloc;
     var surface = try Surface.create(alloc, sibling.app, .{
         .parent = &sibling.core_surface,
+        .with_cwd = opts.with_cwd,
     });
     errdefer surface.destroy(alloc);
     sibling.dimSurface();
     sibling.setSplitZoom(false);
 
     // Create the actual GTKPaned, attach the proper children.
-    const orientation: gtk.Orientation = switch (direction) {
+    const orientation: gtk.Orientation = switch (opts.direction) {
         .right, .left => .horizontal,
         .down, .up => .vertical,
     };
@@ -119,7 +125,7 @@ pub fn init(
     // we're inheriting its parent. The sibling points to its location
     // in the split, and the surface points to the other location.
     const container = sibling.container;
-    const tl: *Surface, const br: *Surface = switch (direction) {
+    const tl: *Surface, const br: *Surface = switch (opts.direction) {
         .right, .down => right_down: {
             sibling.container = .{ .split_tl = &self.top_left };
             surface.container = .{ .split_br = &self.bottom_right };
@@ -138,7 +144,7 @@ pub fn init(
         .container = container,
         .top_left = .{ .surface = tl },
         .bottom_right = .{ .surface = br },
-        .orientation = Orientation.fromDirection(direction),
+        .orientation = Orientation.fromDirection(opts.direction),
     };
 
     // Replace the previous containers element with our split. This allows a

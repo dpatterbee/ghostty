@@ -456,11 +456,13 @@ pub fn performAction(
         .close_window => return try self.closeWindow(target),
         .toggle_maximize => self.toggleMaximize(target),
         .toggle_fullscreen => self.toggleFullscreen(target, value),
-        .new_tab => try self.newTab(target),
+        .new_tab => try self.newTab(target, false),
+        .new_tab_with_cwd => try self.newTab(target, true),
         .close_tab => return try self.closeTab(target),
         .goto_tab => return self.gotoTab(target, value),
         .move_tab => self.moveTab(target, value),
-        .new_split => try self.newSplit(target, value),
+        .new_split => try self.newSplit(target, value, false),
+        .new_split_with_cwd => try self.newSplit(target, value, true),
         .resize_split => self.resizeSplit(target, value),
         .equalize_splits => self.equalizeSplits(target),
         .goto_split => return self.gotoSplit(target, value),
@@ -505,7 +507,7 @@ pub fn performAction(
     return true;
 }
 
-fn newTab(_: *App, target: apprt.Target) !void {
+fn newTab(_: *App, target: apprt.Target, with_cwd: bool) !void {
     switch (target) {
         .app => {},
         .surface => |v| {
@@ -517,7 +519,7 @@ fn newTab(_: *App, target: apprt.Target) !void {
                 return;
             };
 
-            try window.newTab(v);
+            try window.newTab(v, with_cwd);
         },
     }
 }
@@ -583,12 +585,16 @@ fn newSplit(
     self: *App,
     target: apprt.Target,
     direction: apprt.action.SplitDirection,
+    with_cwd: bool,
 ) !void {
     switch (target) {
         .app => {},
         .surface => |v| {
             const alloc = self.core_app.alloc;
-            _ = try Split.create(alloc, v.rt_surface, direction);
+            _ = try Split.create(alloc, v.rt_surface, .{
+                .direction = direction,
+                .with_cwd = with_cwd,
+            });
         },
     }
 }
@@ -770,7 +776,7 @@ fn toggleQuickTerminal(self: *App) !bool {
     try self.winproto.initQuickTerminal(qt);
 
     // Finalize creating the quick terminal
-    try qt.newTab(null);
+    try qt.newTab(null, false);
     qt.present();
     return true;
 }
@@ -1375,7 +1381,7 @@ fn newWindow(self: *App, parent_: ?*CoreSurface) !void {
     var window = try Window.create(alloc, self);
 
     // Add our initial tab
-    try window.newTab(parent_);
+    try window.newTab(parent_, false);
 
     // Show the new window
     window.present();

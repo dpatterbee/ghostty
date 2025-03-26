@@ -600,9 +600,9 @@ pub fn setSubtitle(self: *Window, subtitle: [:0]const u8) void {
 }
 
 /// Add a new tab to this window.
-pub fn newTab(self: *Window, parent: ?*CoreSurface) !void {
+pub fn newTab(self: *Window, parent: ?*CoreSurface, with_cwd: bool) !void {
     const alloc = self.app.core_app.alloc;
-    _ = try Tab.create(alloc, self, parent);
+    _ = try Tab.create(alloc, self, parent, .{ .with_cmd = with_cwd });
 
     // TODO: When this is triggered through a GTK action, the new surface
     // redraws correctly. When it's triggered through keyboard shortcuts, it
@@ -801,7 +801,7 @@ fn gtkNewTabFromOverview(_: *adw.TabOverview, self: *Window) callconv(.c) *adw.T
 
     const alloc = self.app.core_app.alloc;
     const surface = self.actionSurface();
-    const tab = Tab.create(alloc, self, surface) catch unreachable;
+    const tab = Tab.create(alloc, self, surface, .{ .with_cmd = false }) catch unreachable;
     return self.notebook.tab_view.getPage(tab.box.as(gtk.Widget));
 }
 

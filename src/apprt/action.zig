@@ -244,6 +244,14 @@ pub const Action = union(Key) {
     /// Closes the currently focused window.
     close_window,
 
+    /// Open a new tab, inheriting the working directory from the parent
+    /// surface.
+    new_tab_with_cwd,
+
+    /// Open a new split, inheriting the working directory from the parent
+    /// surface.
+    new_split_with_cwd: SplitDirection,
+
     /// Sync with: ghostty_action_tag_e
     pub const Key = enum(c_int) {
         quit,
@@ -287,6 +295,8 @@ pub const Action = union(Key) {
         reload_config,
         config_change,
         close_window,
+        new_tab_with_cwd,
+        new_split_with_cwd,
     };
 
     /// Sync with: ghostty_action_u

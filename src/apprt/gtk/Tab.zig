@@ -41,16 +41,20 @@ elem: Surface.Container.Elem,
 // can easily re-focus that terminal.
 focus_child: ?*Surface,
 
-pub fn create(alloc: Allocator, window: *Window, parent_: ?*CoreSurface) !*Tab {
+const Options = struct {
+    with_cmd: bool,
+};
+
+pub fn create(alloc: Allocator, window: *Window, parent_: ?*CoreSurface, opts: Options) !*Tab {
     var tab = try alloc.create(Tab);
     errdefer alloc.destroy(tab);
-    try tab.init(window, parent_);
+    try tab.init(window, parent_, opts);
     return tab;
 }
 
 /// Initialize the tab, create a surface, and add it to the window. "self" needs
 /// to be a stable pointer, since it is used for GTK events.
-pub fn init(self: *Tab, window: *Window, parent_: ?*CoreSurface) !void {
+pub fn init(self: *Tab, window: *Window, parent_: ?*CoreSurface, opts: Options) !void {
     self.* = .{
         .window = window,
         .label_text = undefined,
@@ -72,6 +76,7 @@ pub fn init(self: *Tab, window: *Window, parent_: ?*CoreSurface) !void {
     // Create the initial surface since all tabs start as a single non-split
     var surface = try Surface.create(window.app.core_app.alloc, window.app, .{
         .parent = parent_,
+        .with_cwd = opts.with_cmd,
     });
     errdefer surface.unref();
     surface.container = .{ .tab_ = self };
