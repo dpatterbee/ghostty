@@ -165,12 +165,17 @@ pub const App = struct {
             .new_window => _ = try self.newSurface(switch (target) {
                 .app => null,
                 .surface => |v| v,
-            }),
+            }, false),
 
             .new_tab => try self.newTab(switch (target) {
                 .app => null,
                 .surface => |v| v,
-            }),
+            }, false),
+
+            .new_tab_with_cwd => try self.newTab(switch (target) {
+                .app => null,
+                .surface => |v| v,
+            }, true),
 
             .size_limit => switch (target) {
                 .app => {},
@@ -217,6 +222,7 @@ pub const App = struct {
 
             // Unimplemented
             .new_split,
+            .new_split_with_cwd,
             .goto_split,
             .resize_split,
             .equalize_splits,
@@ -341,19 +347,19 @@ pub const App = struct {
     }
 
     /// Create a new tab in the parent surface.
-    fn newTab(self: *App, parent_: ?*CoreSurface) !void {
+    fn newTab(self: *App, parent_: ?*CoreSurface, with_cwd: bool) !void {
         if (comptime !darwin_enabled) {
             log.warn("tabbing is not supported on this platform", .{});
             return;
         }
 
         const parent = parent_ orelse {
-            _ = try self.newSurface(null);
+            _ = try self.newSurface(null, with_cwd);
             return;
         };
 
         // Create the new window
-        const window = try self.newSurface(parent);
+        const window = try self.newSurface(parent, with_cwd);
 
         // Add the new window the parent window
         const parent_win = glfwNative.getCocoaWindow(parent.rt_surface.window).?;
@@ -379,13 +385,13 @@ pub const App = struct {
         };
     }
 
-    fn newSurface(self: *App, parent_: ?*CoreSurface) !*Surface {
+    fn newSurface(self: *App, parent_: ?*CoreSurface, with_cwd: bool) !*Surface {
         // Grab a surface allocation because we're going to need it.
         var surface = try self.app.alloc.create(Surface);
         errdefer self.app.alloc.destroy(surface);
 
         // Create the surface -- because windows are surfaces for glfw.
-        try surface.init(self);
+        try surface.init(self, .{ .with_cwd = with_cwd });
         errdefer surface.deinit();
 
         // If we have a parent, inherit some properties
@@ -515,11 +521,13 @@ pub const Surface = struct {
     /// surface.
     title_text: ?[:0]const u8 = null,
 
-    pub const Options = struct {};
+    pub const Options = struct {
+        with_cwd: bool,
+    };
 
     /// Initialize the surface into the given self pointer. This gives a
     /// stable pointer to the destination that can be used for callbacks.
-    pub fn init(self: *Surface, app: *App) !void {
+    pub fn init(self: *Surface, app: *App, _: Options) !void {
         // Create our window
         const win = glfw.Window.create(
             640,
@@ -609,7 +617,7 @@ pub const Surface = struct {
         errdefer app.app.deleteSurface(self);
 
         // Get our new surface config
-        var config = try apprt.surface.newConfig(app.app, &app.config);
+        var config = self.app.config.shallowClone(app.app.alloc);
         defer config.deinit();
 
         // Initialize our surface now that we have the stable pointer.
